@@ -1,0 +1,245 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              04/16/2020 09:50:39 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include "reg52.h"
+   2          
+   3          #define uchar unsigned char
+   4          #define uint unsigned int
+   5          //管脚定义
+   6          sbit IN1=P1^2;
+   7          sbit IN2=P1^3;
+   8          sbit IN3=P1^4;
+   9          sbit IN4=P1^5;
+  10          sbit IRIN=P3^2;
+  11          uchar cmd=0;//接收的指令
+  12          bit rec_flag=0;
+  13          #define right_go{IN3=0,IN4=1;}//OUT4 OUT2为+ OUT3 OUT1为— 4和3控制右 2和1控制左
+  14          #define right_back{IN3=1;IN4=0;}
+  15          #define right_stop{IN3=0;IN4=0;}
+  16          #define left_go{IN2=1,IN1=0;}
+  17          #define left_back{IN2=0;IN1=1;}
+  18          #define left_stop{IN2=0;IN1=0;}
+  19          
+  20          uchar lr[6];//红外接收
+  21          uchar t;//判断逻辑1和逻辑0时的计时变量
+  22          
+  23          void delay(uint x)
+  24          {
+  25   1              while(x--);
+  26   1      }
+  27          
+  28          void forword()//前进
+  29          {
+  30   1              left_go;
+  31   1              right_go;
+  32   1      }
+  33          
+  34          void back()//后退
+  35          {
+  36   1              left_back;
+  37   1              right_back;
+  38   1      }
+  39          
+  40          void turnleft()//左转弯 此时左轮后动 右轮前动
+  41          {
+  42   1              left_back;
+  43   1              right_go;
+  44   1      }
+  45          
+  46          void turnright()//右转弯 此时左轮前动 右轮后动
+  47          {
+  48   1              left_go;
+  49   1              right_back;
+  50   1      }
+  51          
+  52          void stop()//刹车
+  53          {
+  54   1              left_stop;
+C51 COMPILER V9.60.0.0   MAIN                                                              04/16/2020 09:50:39 PAGE 2   
+
+  55   1              right_stop;
+  56   1      }
+  57          
+  58          void UartInit()//串口初始化函数
+  59          {
+  60   1              SM0=0;                          //串口行控制寄存器，设置为工作方式1
+  61   1              SM1=1;
+  62   1              REN=1;                          //允许串口接收  
+  63   1              TMOD=0X20;                      //设置定时器1，工作方式2
+  64   1              PCON=0X80;                      //SMOD为0波特率不加倍
+  65   1              TH1=0XF3;                       //设置波特率初始值4800,无误差
+  66   1              TL1=0XF3;
+  67   1              ES=1;                           //打开串口中断
+  68   1              EA=1;                           //打开总中断
+  69   1              TR1=1;                          //打开定时器1
+  70   1              IT0=1;                          //红外接收
+  71   1              EX0=1;
+  72   1              IRIN=1;
+  73   1      }
+  74          
+  75          void main()
+  76          {
+  77   1              UartInit();
+  78   1              while(1)
+  79   1              /*{
+  80   1                      turnleft();//测试用
+  81   1              }*/
+  82   1              {
+  83   2                      if(rec_flag==1)
+  84   2                      {
+  85   3                              switch(cmd)
+  86   3                              {
+  87   4                                      case 'f':
+  88   4                                              forword();
+  89   4                                              cmd=0;
+  90   4                                              rec_flag=0;
+  91   4                                              break;
+  92   4                                      case 'b':
+  93   4                                              back();
+  94   4                                              cmd=0;
+  95   4                                              rec_flag=0;
+  96   4                                              break;
+  97   4                                      case 'l':
+  98   4                                              turnleft();
+  99   4                                              cmd=0;
+ 100   4                                              rec_flag=0;
+ 101   4                                              break;
+ 102   4                                      case 'r':
+ 103   4                                              turnright();
+ 104   4                                              cmd=0;
+ 105   4                                              rec_flag=0;
+ 106   4                                              break;
+ 107   4                                      case 'F':
+ 108   4                                              forword();
+ 109   4                                              break;
+ 110   4                                      case 'B':
+ 111   4                                              back();
+ 112   4                                              break;
+ 113   4                                      case 'L':
+ 114   4                                              turnleft();
+ 115   4                                              break;
+ 116   4                                      case 'R':
+C51 COMPILER V9.60.0.0   MAIN                                                              04/16/2020 09:50:39 PAGE 3   
+
+ 117   4                                              turnright();
+ 118   4                                              break;
+ 119   4                                      default:
+ 120   4                                              stop();
+ 121   4                                              break;
+ 122   4                              }
+ 123   3                                      
+ 124   3                      }
+ 125   2                      switch(lr[2])
+ 126   2                      {
+ 127   3                              case 0x18:
+ 128   3                                      forword();
+ 129   3                                      //lr[2]=0;
+ 130   3                                      break;
+ 131   3                              case 0x52:
+ 132   3                                      back();
+ 133   3                                      //lr[2]=0;
+ 134   3                                      break;
+ 135   3                              case 0x08:
+ 136   3                                      turnleft();
+ 137   3                                      //lr[2]=0;
+ 138   3                                      break;
+ 139   3                              case 0x5a:
+ 140   3                                      turnright();
+ 141   3                                      //lr[2]=0;
+ 142   3                                      break;
+ 143   3                              default:
+ 144   3                                      stop();
+ 145   3                      }       
+ 146   2              }
+ 147   1      }
+ 148          void UART() interrupt 4
+ 149          {
+ 150   1              if(RI==1)
+ 151   1              {
+ 152   2                      RI=0;
+ 153   2                      cmd=SBUF;
+ 154   2                      SBUF=cmd;
+ 155   2                      rec_flag=1;
+ 156   2              }
+ 157   1      }
+ 158          
+ 159          void Int0() interrupt 0 //红外接收模块
+ 160          {
+ 161   1              uchar k,j;
+ 162   1              uint r;
+ 163   1              t=0;
+ 164   1              delay(700);
+ 165   1              if(IRIN==0)//延时接受信号仍然为低电平 说明接收到了正确的引导码
+ 166   1              {
+ 167   2                      r=1000;//10ms延时
+ 168   2                      while((IRIN==0)&&(r>0))//等待9ms的引导码低电平过去
+ 169   2                      {
+ 170   3                              delay(1);
+ 171   3                              r--;
+ 172   3                      }
+ 173   2                      if(IRIN==1)//9ms后反转为高电平
+ 174   2                      {
+ 175   3                              r=500;
+ 176   3                              while((IRIN==1)&&(r>0))
+ 177   3                              {
+ 178   4                                      delay(1);
+C51 COMPILER V9.60.0.0   MAIN                                                              04/16/2020 09:50:39 PAGE 4   
+
+ 179   4                                      r--;
+ 180   4                              }
+ 181   3                              for(k=0;k<4;k++)
+ 182   3                              {
+ 183   4                                      for(j=0;j<8;j++)
+ 184   4                                      {
+ 185   5                                              r=60;
+ 186   5                                              while((IRIN==0)&&(r>0))//等待数据位前面的560us低电平过去
+ 187   5                                              {
+ 188   6                                                      delay(1);
+ 189   6                                                      r--;
+ 190   6                                              }
+ 191   5                                              r=500;
+ 192   5                                              while((IRIN==1)&&(r>0))//计算高电平长度 确定其数值
+ 193   5                                              {
+ 194   6                                                      delay(10);
+ 195   6                                                      t++;
+ 196   6                                                      r--;
+ 197   6                                                      if(t>30)//高电平过长 出错退出
+ 198   6                                                      {
+ 199   7                                                              //EX0=1;
+ 200   7                                                              return;
+ 201   7                                                      }
+ 202   6                                              }
+ 203   5                                              lr[k]>>=1;//接收的第k个字节向低位移动
+ 204   5                                              if(t>=8)//接收到逻辑1
+ 205   5                                              {
+ 206   6                                                      lr[k]|=0x80;//接收字节的最高位置1
+ 207   6                                              }
+ 208   5                                              t=0;//接收完后计时变量清零
+ 209   5                                      }
+ 210   4                              }
+ 211   3                      }
+ 212   2                      if(lr[2]!=~lr[3])
+ 213   2                              return;//检测到数码原码和反码不符 数据清零
+ 214   2              }
+ 215   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    490    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      8       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
